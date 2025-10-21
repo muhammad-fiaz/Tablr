@@ -1,0 +1,77 @@
+name: CI - Conan / vcpkg / xmake
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        build_system: [xmake, conan, vcpkg]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        if: matrix.build_system == 'conan'
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install Conan
+        if: matrix.build_system == 'conan'
+        run: |
+          python -m pip install --upgrade pip
+          pip install conan
+          conan profile detect --force
+
+      - name: Build with Conan
+        if: matrix.build_system == 'conan'
+        run: |
+          conan create . --build=missing
+
+      - name: Install xmake
+        if: matrix.build_system == 'xmake'
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: latest
+
+      - name: Build with xmake
+        if: matrix.build_system == 'xmake'
+        run: |
+          xmake config -m release
+          xmake build
+          xmake run tests
+
+      - name: Install vcpkg
+        if: matrix.build_system == 'vcpkg'
+        run: |
+          git clone https://github.com/Microsoft/vcpkg.git
+          cd vcpkg
+          ./bootstrap-vcpkg.sh
+        shell: bash
+
+      - name: Build with vcpkg (Unix)
+        if: matrix.build_system == 'vcpkg' && runner.os != 'Windows'
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake
+          cmake --build .
+
+      - name: Build with vcpkg (Windows)
+        if: matrix.build_system == 'vcpkg' && runner.os == 'Windows'
+        run: |
+          cd vcpkg
+          .\bootstrap-vcpkg.bat
+          cd ..
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_TOOLCHAIN_FILE=..\vcpkg\scripts\buildsystems\vcpkg.cmake
+          cmake --build .

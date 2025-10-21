@@ -8,6 +8,10 @@
  * column management, and data access for the Tablr library.
  */
 
+#ifdef _WIN32
+#define strdup _strdup
+#endif
+
 #include "tablr/core/dataframe.h"
 #include <stdlib.h>
 #include <string.h>
@@ -90,7 +94,7 @@ bool tablr_dataframe_add_column(TablrDataFrame* df, const char* name, TablrSerie
     if (!new_cols) return false;
     
     df->columns = new_cols;
-    df->columns[df->ncols].name = _strdup(name);
+    df->columns[df->ncols].name = strdup(name);
     df->columns[df->ncols].series = series;
     df->ncols++;
     
@@ -190,7 +194,7 @@ char** tablr_dataframe_columns(const TablrDataFrame* df, size_t* count) {
     if (!names) return NULL;
     
     for (size_t i = 0; i < df->ncols; i++) {
-        names[i] = _strdup(df->columns[i].name);
+        names[i] = strdup(df->columns[i].name);
     }
     
     return names;

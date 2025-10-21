@@ -9,6 +9,11 @@
  */
 
 #define _CRT_SECURE_NO_WARNINGS
+
+#ifdef _WIN32
+#define strdup _strdup
+#endif
+
 #include "tablr/io/csv.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,7 +53,7 @@ TablrDataFrame* tablr_read_csv(const char* filename, char delimiter, bool has_he
             size_t len = strlen(token);
             if (len > 0 && token[len-1] == '\n') token[len-1] = '\0';
             if (len > 1 && token[len-2] == '\r') token[len-2] = '\0';
-            headers[ncols++] = _strdup(token);
+            headers[ncols++] = strdup(token);
             token = strtok(NULL, &delimiter);
         }
     }

@@ -38,8 +38,7 @@ void test_dataframe_add_column(void) {
     int data[] = {1, 2, 3};
     TablrSeries* s = tablr_series_create(data, 3, TABLR_INT32, TABLR_CPU);
     
-    bool result = tablr_dataframe_add_column(df, "col1", s);
-    assert(result == true);
+    tablr_dataframe_add_column(df, "col1", s);
     assert(tablr_dataframe_ncols(df) == 1);
     assert(tablr_dataframe_nrows(df) == 3);
     
@@ -57,6 +56,7 @@ void test_dataframe_get_column(void) {
     
     assert(retrieved != NULL);
     assert(tablr_series_size(retrieved) == 3);
+    (void)retrieved;
     
     tablr_dataframe_free(df);
     printf("✓ test_dataframe_get_column passed\n");

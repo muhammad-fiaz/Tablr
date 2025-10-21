@@ -10,6 +10,7 @@
 
 #include "tablr/ops/filter.h"
 #include <stdlib.h>
+#include <string.h>
 
 /**
  * @brief Filter dataframe rows using predicate function
@@ -26,7 +27,6 @@ TablrDataFrame* tablr_dataframe_filter(const TablrDataFrame* df, TablrFilterFunc
     if (!df || !predicate) return NULL;
     
     size_t nrows = tablr_dataframe_nrows(df);
-    size_t ncols = tablr_dataframe_ncols(df);
     
     /* Evaluate predicate for each row */
     bool* keep = (bool*)malloc(nrows * sizeof(bool));

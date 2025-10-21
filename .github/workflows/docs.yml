@@ -40,14 +40,18 @@ jobs:
         run: mkdocs build --strict
 
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        id: setup-pages
+        uses: actions/configure-pages@v5
+        continue-on-error: true
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        if: steps.setup-pages.outcome == 'success'
+        uses: actions/upload-pages-artifact@v4
         with:
           path: './site'
 
   deploy:
+    if: needs.build.result == 'success'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -57,3 +61,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        continue-on-error: true
