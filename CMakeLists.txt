@@ -12,8 +12,8 @@ else()
     add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-option(TABLR_BUILD_TESTS "Build tests" ON)
-option(TABLR_BUILD_EXAMPLES "Build examples" ON)
+option(TABLR_BUILD_TESTS "Build tests" OFF)
+option(TABLR_BUILD_EXAMPLES "Build examples" OFF)
 option(TABLR_CUDA_SUPPORT "Enable CUDA support" OFF)
 
 file(GLOB TABLR_CORE_SOURCES "src/core/*.c")
@@ -40,12 +40,12 @@ if(TABLR_CUDA_SUPPORT)
     target_compile_definitions(tablr PUBLIC TABLR_CUDA_ENABLED)
 endif()
 
-if(TABLR_BUILD_TESTS)
+if(TABLR_BUILD_TESTS AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests")
     enable_testing()
     add_subdirectory(tests)
 endif()
 
-if(TABLR_BUILD_EXAMPLES)
+if(TABLR_BUILD_EXAMPLES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/examples")
     add_subdirectory(examples)
 endif()
 

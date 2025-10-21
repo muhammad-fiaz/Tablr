@@ -10,8 +10,12 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 
+#define _CRT_SECURE_NO_WARNINGS
+
 #ifdef _WIN32
 #define strdup _strdup
+#else
+#define _POSIX_C_SOURCE 200809L
 #endif
 
 #include "tablr/io/csv.h"
