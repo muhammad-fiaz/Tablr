@@ -1,0 +1,99 @@
+site_name: Tablr Documentation
+site_description: Fastest and simpler data manipulation library for C/C++
+site_author: Muhammad Fiaz
+site_url: https://muhammad-fiaz.github.io/Tablr/
+
+repo_name: muhammad-fiaz/tablr
+repo_url: https://github.com/muhammad-fiaz/tablr
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.indexes
+    - navigation.footer
+    - toc.follow
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quickstart.md
+      - Basic Concepts: getting-started/concepts.md
+      - Conan / vcpkg / xmake: getting-started/build-with-conan-vcpkg-xmake.md
+  - API Reference:
+      - C API: api/c-api.md
+      - C++ API: api/cpp-api.md
+      - DataFrame Creation: api/creation.md
+      - Data Operations: api/operations.md
+      - Filtering & Selection: api/filtering.md
+      - Grouping & Aggregation: api/grouping.md
+      - Sorting & Ranking: api/sorting.md
+      - Merging & Joining: api/merging.md
+      - I/O Operations: api/io.md
+  - Examples:
+      - Basic Usage: examples/basic.md
+      - Advanced Usage: examples/advanced.md
+      - CSV Operations: examples/csv.md
+      - Complete Examples: examples/complete.md
+  - Contributing: contributing.md
+  - License: license.md
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - tables
+  - def_list
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+plugins:
+  - search
+  - tags
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/muhammad-fiaz/tablr
+    - icon: fontawesome/solid/envelope
+      link: mailto:contact@muhammadfiaz.com
+  version:
+    provider: mike
+
+copyright: Copyright &copy; 2024 Muhammad Fiaz

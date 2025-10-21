@@ -1,0 +1,293 @@
+name: Release
+
+on:
+  release:
+    types: [released]
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            artifact_name: tablr-linux
+            asset_name: tablr-linux-x64.tar.gz
+            platform: Linux x64
+          - os: windows-latest
+            artifact_name: tablr-windows
+            asset_name: tablr-windows-x64.zip
+            platform: Windows x64
+          - os: macos-latest
+            artifact_name: tablr-macos
+            asset_name: tablr-macos-x64.tar.gz
+            platform: macOS x64
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: latest
+
+      - name: Build Release
+        run: |
+          xmake config -m release
+          xmake build tablr
+
+      - name: Package (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p release/lib
+          mkdir -p release/include
+          cp -r include/* release/include/
+          cp xmake.lua release/
+          cp LICENSE release/
+          cp README.md release/
+          find build -name "libtablr.a" -exec cp {} release/lib/ \;
+          tar -czf ${{ matrix.asset_name }} -C release .
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path release\lib
+          New-Item -ItemType Directory -Force -Path release\include
+          Copy-Item -Recurse -Force include\* release\include\
+          Copy-Item xmake.lua release\
+          Copy-Item LICENSE release\
+          Copy-Item README.md release\
+          Get-ChildItem -Path build -Recurse -Filter tablr.lib | Copy-Item -Destination release\lib\
+
+      - name: Compress (Windows)
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path release\* -DestinationPath ${{ matrix.asset_name }}
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./${{ matrix.asset_name }}
+          token: ${{ secrets.GH_TOKEN }}
+
+  publish-conan:
+    name: Publish Conan Package
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install xmake
+        run: |
+          curl -fsSL https://xmake.io/shget.text | bash
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install Conan
+        run: |
+          pip install conan
+          conan profile detect --force
+
+      - name: Create Conan Package
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          conan create . --version=${{ github.event.release.tag_name }}
+
+      - name: Package Conan Recipe
+        run: |
+          mkdir -p conan-package
+          cp conanfile.py conan-package/
+          cp xmake.lua conan-package/
+          cp LICENSE conan-package/
+          cp README.md conan-package/
+          cp -r include conan-package/
+          cp -r src conan-package/
+          tar -czf tablr-conan-${{ github.event.release.tag_name }}.tar.gz -C conan-package .
+
+      - name: Upload Conan Package to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: tablr-conan-${{ github.event.release.tag_name }}.tar.gz
+          token: ${{ secrets.GH_TOKEN }}
+
+  publish-xmake:
+    name: Publish xmake Package
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: latest
+
+      - name: Build and Package
+        run: |
+          xmake config -m release
+          xmake build
+          xmake package
+
+      - name: Create xmake Package
+        run: |
+          mkdir -p xmake-package
+          cp xmake.lua xmake-package/
+          cp LICENSE xmake-package/
+          cp README.md xmake-package/
+          cp -r include xmake-package/
+          cp -r src xmake-package/
+          tar -czf tablr-xmake-${{ github.event.release.tag_name }}.tar.gz -C xmake-package .
+
+      - name: Upload xmake Package to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: tablr-xmake-${{ github.event.release.tag_name }}.tar.gz
+          token: ${{ secrets.GH_TOKEN }}
+
+  publish-vcpkg:
+    name: Publish vcpkg Port
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Create vcpkg Port
+        run: |
+          mkdir -p vcpkg-port/ports/tablr
+          cp vcpkg.json vcpkg-port/ports/tablr/
+          cp xmake.lua vcpkg-port/ports/tablr/
+          cp LICENSE vcpkg-port/ports/tablr/
+          cp README.md vcpkg-port/ports/tablr/
+          cp -r include vcpkg-port/ports/tablr/
+          cp -r src vcpkg-port/ports/tablr/
+          cat > vcpkg-port/ports/tablr/portfile.cmake << 'EOF'
+          vcpkg_from_github(
+              OUT_SOURCE_PATH SOURCE_PATH
+              REPO muhammad-fiaz/tablr
+              REF ${{ github.event.release.tag_name }}
+              SHA512 0
+              HEAD_REF main
+          )
+
+          vcpkg_configure_cmake(
+              SOURCE_PATH ${SOURCE_PATH}
+              PREFER_NINJA
+          )
+
+          vcpkg_install_cmake()
+          vcpkg_fixup_cmake_targets()
+
+          file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/include)
+          file(INSTALL ${SOURCE_PATH}/LICENSE DESTINATION ${CURRENT_PACKAGES_DIR}/share/tablr RENAME copyright)
+          EOF
+
+      - name: Package vcpkg Port
+        run: |
+          tar -czf tablr-vcpkg-${{ github.event.release.tag_name }}.tar.gz -C vcpkg-port .
+
+      - name: Upload vcpkg Port to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: tablr-vcpkg-${{ github.event.release.tag_name }}.tar.gz
+          token: ${{ secrets.GH_TOKEN }}
+
+  update-release-notes:
+    name: Update Release Notes
+    runs-on: ubuntu-latest
+    needs: [build, publish-xmake, publish-conan, publish-vcpkg]
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Generate Release Notes
+        id: notes
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          REPO="${{ github.repository }}"
+
+          cat > release_notes.md << EOF
+          ## 📦 Installation
+
+          | File | Platform | Method | Download |
+          |------|----------|--------|----------|
+          | \`tablr-linux-x64.tar.gz\` | Linux x64 | Binary | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-linux-x64.tar.gz) |
+          | \`tablr-windows-x64.zip\` | Windows x64 | Binary | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-windows-x64.zip) |
+          | \`tablr-macos-x64.tar.gz\` | macOS x64 | Binary | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-macos-x64.tar.gz) |
+          | \`tablr-xmake-${VERSION}.tar.gz\` | Windows, Linux, macOS | xmake | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-xmake-${VERSION}.tar.gz) |
+          | \`tablr-conan-${VERSION}.tar.gz\` | Windows, Linux, macOS | Conan | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-conan-${VERSION}.tar.gz) |
+          | \`tablr-vcpkg-${VERSION}.tar.gz\` | Windows, Linux, macOS | vcpkg | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-vcpkg-${VERSION}.tar.gz) |
+
+          **Note:** All packages include static libraries (.a/.lib), headers, and xmake.lua for easy integration.
+
+          ## 🚀 Quick Install
+
+          ### Binary Installation
+
+          **Linux/macOS:**
+          \`\`\`bash
+          wget https://github.com/${REPO}/releases/download/${VERSION}/tablr-linux-x64.tar.gz
+          tar -xzf tablr-linux-x64.tar.gz
+          sudo cp -r lib/* /usr/local/lib/
+          sudo cp -r include/* /usr/local/include/
+          \`\`\`
+
+          **Windows:** Download and extract \`tablr-windows-x64.zip\`, then add to your project paths.
+
+          ### xmake
+          \`\`\`bash
+          wget https://github.com/${REPO}/releases/download/${VERSION}/tablr-xmake-${VERSION}.tar.gz
+          tar -xzf tablr-xmake-${VERSION}.tar.gz
+          cd tablr-xmake-${VERSION}
+          xmake install
+          \`\`\`
+
+          Or add to your xmake.lua:
+          \`\`\`lua
+          add_requires("tablr ${VERSION}")
+          target("your_app")
+              add_packages("tablr")
+          \`\`\`
+
+          ### Conan
+          \`\`\`bash
+          wget https://github.com/${REPO}/releases/download/${VERSION}/tablr-conan-${VERSION}.tar.gz
+          tar -xzf tablr-conan-${VERSION}.tar.gz
+          conan create . --version=${VERSION}
+          \`\`\`
+
+          ### vcpkg
+          \`\`\`bash
+          wget https://github.com/${REPO}/releases/download/${VERSION}/tablr-vcpkg-${VERSION}.tar.gz
+          tar -xzf tablr-vcpkg-${VERSION}.tar.gz
+          cp -r ports/tablr \$VCPKG_ROOT/ports/
+          vcpkg install tablr
+          \`\`\`
+
+          ## 📚 Documentation
+          Visit https://muhammad-fiaz.github.io/Tablr for full documentation.
+
+          **Full Changelog:** https://github.com/${REPO}/commits/${VERSION}
+          EOF
+
+      - name: Update Release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          body_path: release_notes.md

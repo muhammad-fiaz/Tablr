@@ -1,0 +1,15 @@
+[project]
+name = "tablr"
+version = "0.0.0"
+description = "Fastest and Simpler Data Manipulation Library for C/C++"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "conan>=2.21.0",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.22",
+    "ruff>=0.14.1",
+]

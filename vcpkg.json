@@ -1,0 +1,8 @@
+{
+  "name": "tablr",
+  "version": "0.0.0",
+  "description": "Fastest and simpler data manipulation library for C/C++",
+  "homepage": "https://github.com/muhammad-fiaz/tablr",
+  "license": "Apache-2.0",
+  "dependencies": []
+}

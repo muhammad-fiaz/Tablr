@@ -1,0 +1,30 @@
+# Normalize line endings and treat common source files as text
+* text=auto
+
+# Explicitly set text for source files
+*.c     text
+*.h     text
+*.cpp   text
+*.hpp   text
+*.cc    text
+*.hh    text
+*.cxx   text
+*.hxx   text
+
+# Scripts and documentation
+*.py    text
+*.sh    text eol=lf
+*.md    text
+*.rst   text
+
+# Binary files (do not treat as text)
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+
+# Force LF in repository for some files
+*.yml   text eol=lf
+*.yaml  text eol=lf

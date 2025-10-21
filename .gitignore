@@ -1,0 +1,131 @@
+# -----------------------------
+# Tablr .gitignore
+# C / C++ project ignores: build artifacts, temporary files, package managers
+# -----------------------------
+
+# Build directories
+build/
+out/
+bin/
+lib/
+lib64/
+_install/
+.xmake/
+.xmake_local/
+.cache/
+
+# Compiled object files, static and shared libs
+*.o
+*.ko
+*.obj
+*.lo
+*.la
+*.al
+*.a
+*.lib
+*.lai
+*.lai
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+
+# Linker and debug
+*.ilk
+*.pdb
+*.idb
+*.exp
+
+# Precompiled headers
+*.gch
+*.pch
+
+# Temporary and editor files
+*.swp
+*.swo
+*~
+# Emacs/Vim swap
+.#*
+
+# Backup files
+*.bak
+*.tmp
+
+# IDEs and editors
+.vscode/
+.idea/
+.vs/
+*.suo
+*.user
+*.userosscache
+*.VC.db
+*.VC.opendb
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.mypy_cache/
+.pytest_cache/
+*.egg-info/
+dist/
+.eggs/
+
+# Documentation
+site/
+docs/_build/
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Conan
+conan.lock
+conanbuildinfo.*
+conaninfo.txt
+graph_info.json
+conan_package.tgz
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+Makefile
+build-*/
+install_manifest.txt
+
+# xmake
+.xmake/
+xmake.lua.lock
+
+# vcpkg
+vcpkg_installed/
+vcpkg/downloads/
+vcpkg/buildtrees/
+vcpkg/packages/
+vcpkg/installed/
+vcpkg/archives/
+
+# Coverage, profiling and test outputs
+coverage/
+*.lcov
+*.gcda
+*.gcno
+*.profraw
+*.profdata
+lcov-report/
+
+# Logs
+*.log
+logs/
+
+# Other
+tags
+TAGS
+cscope.*
+
