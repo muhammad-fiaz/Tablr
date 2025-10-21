@@ -266,8 +266,11 @@ Special thanks to all contributors and the open-source community.
 
 Found a bug? Please [open an issue](https://github.com/muhammad-fiaz/tablr/issues) on GitHub.
 
+
 <div align="center">
 
-[⭐ Star the repository](https://github.com/muhammad-fiaz/tablr/) if you find Tablr useful!
+[![Star History Chart](https://api.star-history.com/svg?repos=muhammad-fiaz/Tensr&type=Date&bg=transparent)](https://github.com/muhammad-fiaz/Tensr/)
+
+**⭐ Star the repository if you find Tensr useful!**
 
 </div>
