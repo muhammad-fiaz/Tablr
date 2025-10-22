@@ -1,6 +1,6 @@
 [project]
 name = "tablr"
-version = "0.0.0"
+version = "0.0.1"
 description = "Fastest and Simpler Data Manipulation Library for C/C++"
 readme = "README.md"
 requires-python = ">=3.14"

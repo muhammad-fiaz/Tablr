@@ -51,9 +51,80 @@ vcpkg install tablr
 
 ## From Source
 
+### Basic Build
+
 ```bash
 git clone https://github.com/muhammad-fiaz/tablr.git
 cd tablr
 xmake build
 xmake install
+```
+
+### Build with Accelerator Support
+
+#### CUDA (NVIDIA GPUs)
+
+```bash
+xmake f --cuda=y
+xmake build
+xmake install
+```
+
+Requires: NVIDIA GPU with CUDA Toolkit installed
+
+#### Intel XPU
+
+```bash
+xmake f --xpu=y
+xmake build
+xmake install
+```
+
+Requires: Intel GPU with SYCL/DPC++ support
+
+#### NPU (Neural Processing Units)
+
+```bash
+xmake f --npu=y
+xmake build
+xmake install
+```
+
+Requires: NPU hardware (Qualcomm, MediaTek, etc.)
+
+#### TPU (Tensor Processing Units)
+
+```bash
+xmake f --tpu=y
+xmake build
+xmake install
+```
+
+Requires: TPU hardware (Google TPU, similar accelerators)
+
+#### Multiple Accelerators
+
+```bash
+xmake f --cuda=y --xpu=y --npu=y --tpu=y
+xmake build
+xmake install
+```
+
+### CMake Build
+
+```bash
+mkdir build && cd build
+cmake -DTABLR_CUDA_SUPPORT=ON -DTABLR_XPU_SUPPORT=ON ..
+make
+make install
+```
+
+## Verifying Installation
+
+```bash
+# Run tests
+xmake run tests
+
+# Check device support
+xmake run example_device_switching
 ```

@@ -6,24 +6,93 @@ on:
 
 jobs:
   build:
-    name: Build on ${{ matrix.os }}
+    name: Build ${{ matrix.variant }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+        variant: [cpu, cuda, xpu, npu, tpu, all]
+        exclude:
+          - os: macos-latest
+            variant: cuda
+          - os: macos-latest
+            variant: xpu
         include:
           - os: ubuntu-latest
-            artifact_name: tablr-linux
-            asset_name: tablr-linux-x64.tar.gz
-            platform: Linux x64
+            variant: cpu
+            artifact_name: tablr-linux-cpu
+            asset_name: tablr-linux-x64-cpu.tar.gz
+            build_flags: ""
+          - os: ubuntu-latest
+            variant: cuda
+            artifact_name: tablr-linux-cuda
+            asset_name: tablr-linux-x64-cuda.tar.gz
+            build_flags: "--cuda=y"
+          - os: ubuntu-latest
+            variant: xpu
+            artifact_name: tablr-linux-xpu
+            asset_name: tablr-linux-x64-xpu.tar.gz
+            build_flags: "--xpu=y"
+          - os: ubuntu-latest
+            variant: npu
+            artifact_name: tablr-linux-npu
+            asset_name: tablr-linux-x64-npu.tar.gz
+            build_flags: "--npu=y"
+          - os: ubuntu-latest
+            variant: tpu
+            artifact_name: tablr-linux-tpu
+            asset_name: tablr-linux-x64-tpu.tar.gz
+            build_flags: "--tpu=y"
+          - os: ubuntu-latest
+            variant: all
+            artifact_name: tablr-linux-all
+            asset_name: tablr-linux-x64-all.tar.gz
+            build_flags: "--cuda=y --xpu=y --npu=y --tpu=y"
           - os: windows-latest
-            artifact_name: tablr-windows
-            asset_name: tablr-windows-x64.zip
-            platform: Windows x64
+            variant: cpu
+            artifact_name: tablr-windows-cpu
+            asset_name: tablr-windows-x64-cpu.zip
+            build_flags: ""
+          - os: windows-latest
+            variant: cuda
+            artifact_name: tablr-windows-cuda
+            asset_name: tablr-windows-x64-cuda.zip
+            build_flags: "--cuda=y"
+          - os: windows-latest
+            variant: npu
+            artifact_name: tablr-windows-npu
+            asset_name: tablr-windows-x64-npu.zip
+            build_flags: "--npu=y"
+          - os: windows-latest
+            variant: tpu
+            artifact_name: tablr-windows-tpu
+            asset_name: tablr-windows-x64-tpu.zip
+            build_flags: "--tpu=y"
+          - os: windows-latest
+            variant: all
+            artifact_name: tablr-windows-all
+            asset_name: tablr-windows-x64-all.zip
+            build_flags: "--cuda=y --npu=y --tpu=y"
           - os: macos-latest
-            artifact_name: tablr-macos
-            asset_name: tablr-macos-x64.tar.gz
-            platform: macOS x64
+            variant: cpu
+            artifact_name: tablr-macos-cpu
+            asset_name: tablr-macos-x64-cpu.tar.gz
+            build_flags: ""
+          - os: macos-latest
+            variant: npu
+            artifact_name: tablr-macos-npu
+            asset_name: tablr-macos-x64-npu.tar.gz
+            build_flags: "--npu=y"
+          - os: macos-latest
+            variant: tpu
+            artifact_name: tablr-macos-tpu
+            asset_name: tablr-macos-x64-tpu.tar.gz
+            build_flags: "--tpu=y"
+          - os: macos-latest
+            variant: all
+            artifact_name: tablr-macos-all
+            asset_name: tablr-macos-x64-all.tar.gz
+            build_flags: "--npu=y --tpu=y"
 
     steps:
       - uses: actions/checkout@v5
@@ -33,9 +102,22 @@ jobs:
         with:
           xmake-version: latest
 
+      - name: Install CUDA Toolkit (Ubuntu CUDA)
+        if: matrix.os == 'ubuntu-latest' && (matrix.variant == 'cuda' || matrix.variant == 'all')
+        run: |
+          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.0-1_all.deb
+          sudo dpkg -i cuda-keyring_1.0-1_all.deb
+          sudo apt-get update
+          sudo apt-get -y install cuda-toolkit-12-3
+
+      - name: Install CUDA Toolkit (Windows CUDA)
+        if: matrix.os == 'windows-latest' && (matrix.variant == 'cuda' || matrix.variant == 'all')
+        run: |
+          choco install cuda --version=12.3.0
+
       - name: Build Release
         run: |
-          xmake config -m release
+          xmake f -m release ${{ matrix.build_flags }}
           xmake build tablr
 
       - name: Package (Linux/macOS)
@@ -72,7 +154,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ./${{ matrix.asset_name }}
-          token: ${{ secrets.GH_TOKEN }}
 
   publish-conan:
     name: Publish Conan Package
@@ -89,38 +170,37 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install xmake
-        run: |
-          curl -fsSL https://xmake.io/shget.text | bash
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
       - name: Install Conan
         run: |
           pip install conan
           conan profile detect --force
 
+      - name: Update Conan Version
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          sed -i "s/version: str = \".*\"/version: str = \"${VERSION#v}\"/g" conanfile.py
+
       - name: Create Conan Package
         run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          conan create . --version=${{ github.event.release.tag_name }}
+          VERSION="${{ github.event.release.tag_name }}"
+          conan create . --version=${VERSION#v}
 
       - name: Package Conan Recipe
         run: |
+          VERSION="${{ github.event.release.tag_name }}"
           mkdir -p conan-package
           cp conanfile.py conan-package/
-          cp xmake.lua conan-package/
           cp CMakeLists.txt conan-package/
           cp LICENSE conan-package/
           cp README.md conan-package/
           cp -r include conan-package/
           cp -r src conan-package/
-          tar -czf tablr-conan-${{ github.event.release.tag_name }}.tar.gz -C conan-package .
+          tar -czf tablr-conan-${VERSION}.tar.gz -C conan-package .
 
       - name: Upload Conan Package to Release
         uses: softprops/action-gh-release@v2
         with:
           files: tablr-conan-${{ github.event.release.tag_name }}.tar.gz
-          token: ${{ secrets.GH_TOKEN }}
 
   publish-xmake:
     name: Publish xmake Package
@@ -137,14 +217,14 @@ jobs:
         with:
           xmake-version: latest
 
-      - name: Build and Package
+      - name: Update xmake Version
         run: |
-          xmake config -m release
-          xmake build
-          xmake package
+          VERSION="${{ github.event.release.tag_name }}"
+          sed -i "s/set_version(\".*\")/set_version(\"${VERSION#v}\")/g" xmake.lua
 
       - name: Create xmake Package
         run: |
+          VERSION="${{ github.event.release.tag_name }}"
           mkdir -p xmake-package
           cp xmake.lua xmake-package/
           cp CMakeLists.txt xmake-package/
@@ -152,13 +232,12 @@ jobs:
           cp README.md xmake-package/
           cp -r include xmake-package/
           cp -r src xmake-package/
-          tar -czf tablr-xmake-${{ github.event.release.tag_name }}.tar.gz -C xmake-package .
+          tar -czf tablr-xmake-${VERSION}.tar.gz -C xmake-package .
 
       - name: Upload xmake Package to Release
         uses: softprops/action-gh-release@v2
         with:
           files: tablr-xmake-${{ github.event.release.tag_name }}.tar.gz
-          token: ${{ secrets.GH_TOKEN }}
 
   publish-vcpkg:
     name: Publish vcpkg Port
@@ -170,35 +249,45 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Update vcpkg Version
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          sed -i "s/\"version\": \".*\"/\"version\": \"${VERSION#v}\"/g" vcpkg.json
+
       - name: Create vcpkg Port
         run: |
+          VERSION="${{ github.event.release.tag_name }}"
           mkdir -p vcpkg-port/ports/tablr
           cp vcpkg.json vcpkg-port/ports/tablr/
-          cp xmake.lua vcpkg-port/ports/tablr/
-          cp CMakeLists.txt vcpkg-port/ports/tablr/
-          cp LICENSE vcpkg-port/ports/tablr/
-          cp README.md vcpkg-port/ports/tablr/
-          cp -r include vcpkg-port/ports/tablr/
-          cp -r src vcpkg-port/ports/tablr/
-          cat > vcpkg-port/ports/tablr/portfile.cmake << 'EOF'
+          
+          cat > vcpkg-port/ports/tablr/portfile.cmake << EOF
           vcpkg_from_github(
               OUT_SOURCE_PATH SOURCE_PATH
               REPO muhammad-fiaz/tablr
-              REF ${{ github.event.release.tag_name }}
+              REF ${VERSION}
               SHA512 0
               HEAD_REF main
           )
-
-          vcpkg_configure_cmake(
-              SOURCE_PATH ${SOURCE_PATH}
-              PREFER_NINJA
+          
+          vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
+              FEATURES
+                  cuda TABLR_CUDA_SUPPORT
+                  xpu TABLR_XPU_SUPPORT
+                  npu TABLR_NPU_SUPPORT
+                  tpu TABLR_TPU_SUPPORT
           )
-
-          vcpkg_install_cmake()
-          vcpkg_fixup_cmake_targets()
-
-          file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/include)
-          file(INSTALL ${SOURCE_PATH}/LICENSE DESTINATION ${CURRENT_PACKAGES_DIR}/share/tablr RENAME copyright)
+          
+          vcpkg_cmake_configure(
+              SOURCE_PATH "\${SOURCE_PATH}"
+              OPTIONS \${FEATURE_OPTIONS} -DTABLR_BUILD_TESTS=OFF -DTABLR_BUILD_EXAMPLES=OFF
+          )
+          
+          vcpkg_cmake_install()
+          vcpkg_cmake_config_fixup()
+          vcpkg_copy_pdbs()
+          
+          file(REMOVE_RECURSE "\${CURRENT_PACKAGES_DIR}/debug/include")
+          file(INSTALL "\${SOURCE_PATH}/LICENSE" DESTINATION "\${CURRENT_PACKAGES_DIR}/share/\${PORT}" RENAME copyright)
           EOF
 
       - name: Package vcpkg Port
@@ -209,7 +298,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: tablr-vcpkg-${{ github.event.release.tag_name }}.tar.gz
-          token: ${{ secrets.GH_TOKEN }}
 
   update-release-notes:
     name: Update Release Notes
@@ -230,14 +318,33 @@ jobs:
           cat > release_notes.md << EOF
           ## 📦 Installation
 
-          | File | Platform | Method | Download |
-          |------|----------|--------|----------|
-          | \`tablr-linux-x64.tar.gz\` | Linux x64 | Binary | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-linux-x64.tar.gz) |
-          | \`tablr-windows-x64.zip\` | Windows x64 | Binary | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-windows-x64.zip) |
-          | \`tablr-macos-x64.tar.gz\` | macOS x64 | Binary | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-macos-x64.tar.gz) |
-          | \`tablr-xmake-${VERSION}.tar.gz\` | Windows, Linux, macOS | xmake | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-xmake-${VERSION}.tar.gz) |
-          | \`tablr-conan-${VERSION}.tar.gz\` | Windows, Linux, macOS | Conan | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-conan-${VERSION}.tar.gz) |
-          | \`tablr-vcpkg-${VERSION}.tar.gz\` | Windows, Linux, macOS | vcpkg | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-vcpkg-${VERSION}.tar.gz) |
+          ### Binary Releases
+
+          | File | Platform | Devices | Download |
+          |------|----------|---------|----------|
+          | \`tablr-linux-x64-cpu.tar.gz\` | Linux x64 | CPU | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-linux-x64-cpu.tar.gz) |
+          | \`tablr-linux-x64-cuda.tar.gz\` | Linux x64 | CPU + CUDA | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-linux-x64-cuda.tar.gz) |
+          | \`tablr-linux-x64-xpu.tar.gz\` | Linux x64 | CPU + XPU | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-linux-x64-xpu.tar.gz) |
+          | \`tablr-linux-x64-npu.tar.gz\` | Linux x64 | CPU + NPU | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-linux-x64-npu.tar.gz) |
+          | \`tablr-linux-x64-tpu.tar.gz\` | Linux x64 | CPU + TPU | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-linux-x64-tpu.tar.gz) |
+          | \`tablr-linux-x64-all.tar.gz\` | Linux x64 | All Devices | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-linux-x64-all.tar.gz) |
+          | \`tablr-windows-x64-cpu.zip\` | Windows x64 | CPU | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-windows-x64-cpu.zip) |
+          | \`tablr-windows-x64-cuda.zip\` | Windows x64 | CPU + CUDA | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-windows-x64-cuda.zip) |
+          | \`tablr-windows-x64-npu.zip\` | Windows x64 | CPU + NPU | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-windows-x64-npu.zip) |
+          | \`tablr-windows-x64-tpu.zip\` | Windows x64 | CPU + TPU | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-windows-x64-tpu.zip) |
+          | \`tablr-windows-x64-all.zip\` | Windows x64 | All Devices | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-windows-x64-all.zip) |
+          | \`tablr-macos-x64-cpu.tar.gz\` | macOS x64 | CPU | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-macos-x64-cpu.tar.gz) |
+          | \`tablr-macos-x64-npu.tar.gz\` | macOS x64 | CPU + NPU | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-macos-x64-npu.tar.gz) |
+          | \`tablr-macos-x64-tpu.tar.gz\` | macOS x64 | CPU + TPU | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-macos-x64-tpu.tar.gz) |
+          | \`tablr-macos-x64-all.tar.gz\` | macOS x64 | All Devices | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-macos-x64-all.tar.gz) |
+
+          ### Package Managers
+
+          | Package | Build System | Devices | Download |
+          |---------|--------------|---------|----------|
+          | \`tablr-xmake-${VERSION}.tar.gz\` | xmake | Configurable | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-xmake-${VERSION}.tar.gz) |
+          | \`tablr-conan-${VERSION}.tar.gz\` | Conan | Configurable | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-conan-${VERSION}.tar.gz) |
+          | \`tablr-vcpkg-${VERSION}.tar.gz\` | vcpkg | Configurable | [Download](https://github.com/${REPO}/releases/download/${VERSION}/tablr-vcpkg-${VERSION}.tar.gz) |
 
           **Note:** All packages include static libraries (.a/.lib), headers, and xmake.lua for easy integration.
 
@@ -245,46 +352,87 @@ jobs:
 
           ### Binary Installation
 
-          **Linux/macOS:**
+          **Linux/macOS (CPU):**
           \`\`\`bash
-          wget https://github.com/${REPO}/releases/download/${VERSION}/tablr-linux-x64.tar.gz
-          tar -xzf tablr-linux-x64.tar.gz
+          wget https://github.com/${REPO}/releases/download/${VERSION}/tablr-linux-x64-cpu.tar.gz
+          tar -xzf tablr-linux-x64-cpu.tar.gz
           sudo cp -r lib/* /usr/local/lib/
           sudo cp -r include/* /usr/local/include/
           \`\`\`
 
-          **Windows:** Download and extract \`tablr-windows-x64.zip\`, then add to your project paths.
+          **Linux/macOS (CUDA):**
+          \`\`\`bash
+          wget https://github.com/${REPO}/releases/download/${VERSION}/tablr-linux-x64-cuda.tar.gz
+          tar -xzf tablr-linux-x64-cuda.tar.gz
+          sudo cp -r lib/* /usr/local/lib/
+          sudo cp -r include/* /usr/local/include/
+          \`\`\`
+
+          **Windows:** Download \`tablr-windows-x64-cpu.zip\` or \`tablr-windows-x64-cuda.zip\` and add to your project paths.
 
           ### xmake
           \`\`\`bash
+          # Download and install
           wget https://github.com/${REPO}/releases/download/${VERSION}/tablr-xmake-${VERSION}.tar.gz
           tar -xzf tablr-xmake-${VERSION}.tar.gz
           cd tablr-xmake-${VERSION}
+          
+          # Build with device support
+          xmake f --cuda=y --npu=y --tpu=y
           xmake install
           \`\`\`
 
           Or add to your xmake.lua:
           \`\`\`lua
-          add_requires("tablr ${VERSION}")
+          add_requires("tablr ${VERSION#v}")
           target("your_app")
               add_packages("tablr")
           \`\`\`
 
           ### Conan
           \`\`\`bash
+          # Download package
           wget https://github.com/${REPO}/releases/download/${VERSION}/tablr-conan-${VERSION}.tar.gz
           tar -xzf tablr-conan-${VERSION}.tar.gz
-          conan create . --version=${VERSION}
+          
+          # Install with options
+          conan create . --version=${VERSION#v}
+          
+          # Or use in conanfile.txt
+          # [requires]
+          # tablr/${VERSION#v}
+          # [options]
+          # tablr/*:cuda=True
+          # tablr/*:npu=True
           \`\`\`
 
           ### vcpkg
           \`\`\`bash
+          # Download port
           wget https://github.com/${REPO}/releases/download/${VERSION}/tablr-vcpkg-${VERSION}.tar.gz
           tar -xzf tablr-vcpkg-${VERSION}.tar.gz
+          
+          # Copy to vcpkg
           cp -r ports/tablr \$VCPKG_ROOT/ports/
-          vcpkg install tablr
+          
+          # Install with features
+          vcpkg install tablr[cuda,npu,tpu]
           \`\`\`
 
+          ## 🖥️ Device Support
+          
+          All builds include support for:
+          - **CPU**: Always available (default)
+          - **CUDA**: NVIDIA GPUs (cuda/all variants)
+          - **XPU**: Intel GPUs (all variants on Linux)
+          - **NPU**: Neural accelerators (all variants)
+          - **TPU**: Tensor accelerators (all variants)
+          
+          Choose the variant that matches your hardware:
+          - \`cpu\` - CPU only, smallest size
+          - \`cuda\` - NVIDIA GPU support
+          - \`all\` - All devices, largest size
+          
           ## 📚 Documentation
           Visit https://muhammad-fiaz.github.io/Tablr for full documentation.
 
@@ -294,5 +442,4 @@ jobs:
       - name: Update Release
         uses: softprops/action-gh-release@v2
         with:
-          token: ${{ secrets.GH_TOKEN }}
           body_path: release_notes.md

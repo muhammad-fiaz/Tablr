@@ -1,8 +1,38 @@
 {
   "name": "tablr",
-  "version": "0.0.0",
-  "description": "Fastest and simpler data manipulation library for C/C++",
+  "version": "0.0.1",
+  "description": "Fastest and simpler data manipulation library for C/C++ with multi-device support (CPU, CUDA, XPU, NPU, TPU)",
   "homepage": "https://github.com/muhammad-fiaz/tablr",
   "license": "Apache-2.0",
-  "dependencies": []
+  "supports": "!uwp",
+  "dependencies": [],
+  "features": {
+    "cuda": {
+      "description": "Enable NVIDIA CUDA GPU support",
+      "dependencies": [
+        {
+          "name": "cuda",
+          "platform": "!osx"
+        }
+      ]
+    },
+    "xpu": {
+      "description": "Enable Intel XPU support"
+    },
+    "npu": {
+      "description": "Enable NPU support"
+    },
+    "tpu": {
+      "description": "Enable TPU support"
+    },
+    "all": {
+      "description": "Enable all device support",
+      "dependencies": [
+        {
+          "name": "tablr",
+          "features": ["cuda", "xpu", "npu", "tpu"]
+        }
+      ]
+    }
+  }
 }

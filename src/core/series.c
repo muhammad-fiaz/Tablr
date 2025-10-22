@@ -9,6 +9,7 @@
  */
 
 #include "tablr/core/series.h"
+#include "tablr/device/device.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -246,4 +247,18 @@ void tablr_series_print(const TablrSeries* series) {
     
     if (series->size > 10) printf(", ...");
     printf("]\n");
+}
+
+/**
+ * @brief Create series from array data using default device
+ * 
+ * Convenience function that creates a series using the current default device.
+ * 
+ * @param data Pointer to source data array
+ * @param size Number of elements in array
+ * @param dtype Data type of elements
+ * @return Pointer to new series, or NULL on failure
+ */
+TablrSeries* tablr_series_create_default(const void* data, size_t size, TablrDType dtype) {
+    return tablr_series_create(data, size, dtype, tablr_get_default_device());
 }

@@ -19,10 +19,19 @@ extern "C" {
  * @param data Pointer to source data
  * @param size Number of elements
  * @param dtype Data type
- * @param device Target device
+ * @param device Target device (use TABLR_CPU for default or call tablr_get_default_device())
  * @return Pointer to new series or NULL on failure
  */
 TablrSeries* tablr_series_create(const void* data, size_t size, TablrDType dtype, TablrDevice device);
+
+/**
+ * @brief Create series from array data using default device
+ * @param data Pointer to source data
+ * @param size Number of elements
+ * @param dtype Data type
+ * @return Pointer to new series or NULL on failure
+ */
+TablrSeries* tablr_series_create_default(const void* data, size_t size, TablrDType dtype);
 
 /**
  * @brief Create series filled with zeros
