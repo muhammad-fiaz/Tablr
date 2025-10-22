@@ -57,6 +57,7 @@ nav:
       - Sorting & Ranking: api/sorting.md
       - Merging & Joining: api/merging.md
       - I/O Operations: api/io.md
+      - Device Management: api/device.md
   - Examples:
       - Basic Usage: examples/basic.md
       - Advanced Usage: examples/advanced.md

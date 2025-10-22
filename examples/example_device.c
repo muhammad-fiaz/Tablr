@@ -56,8 +56,8 @@ int main(void) {
     tablr_series_free(tpu_series);
     tablr_series_free(transferred);
     
-    printf("\nNote: Device operations are placeholders.\n");
-    printf("Actual GPU/XPU/NPU/TPU support requires hardware and drivers.\n");
+    printf("\nNote: GPU/XPU/NPU/TPU support requires hardware and drivers.\n");
+    printf("Build with CUDA support: xmake f --cuda=y && xmake\n");
     
     return 0;
 }

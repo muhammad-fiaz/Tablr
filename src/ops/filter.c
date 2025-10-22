@@ -133,16 +133,81 @@ TablrDataFrame* tablr_dataframe_select_columns(const TablrDataFrame* df, const c
 }
 
 /**
+ * @brief Check if value is NaN for float types
+ */
+static bool is_nan_value(void* ptr, TablrDType dtype) {
+    if (dtype == TABLR_FLOAT32) {
+        float val = *(float*)ptr;
+        return val != val;
+    } else if (dtype == TABLR_FLOAT64) {
+        double val = *(double*)ptr;
+        return val != val;
+    }
+    return false;
+}
+
+/**
  * @brief Drop rows with missing values
  * 
- * Creates a new dataframe with rows containing missing values removed.
- * Currently returns a copy as missing value detection is not yet implemented.
+ * Creates a new dataframe with rows containing missing (NaN) values removed.
+ * Checks all columns for NaN values in float types.
  * 
  * @param df Source dataframe
  * @return New dataframe without missing values, or NULL on error
  */
 TablrDataFrame* tablr_dataframe_dropna(const TablrDataFrame* df) {
     if (!df) return NULL;
-    /* TODO: Implement missing value detection */
-    return tablr_dataframe_copy(df);
+    
+    size_t nrows = tablr_dataframe_nrows(df);
+    size_t ncols = tablr_dataframe_ncols(df);
+    
+    if (nrows == 0 || ncols == 0) {
+        return tablr_dataframe_copy(df);
+    }
+    
+    /* Mark rows with missing values */
+    bool* keep = (bool*)malloc(nrows * sizeof(bool));
+    for (size_t i = 0; i < nrows; i++) {
+        keep[i] = true;
+    }
+    
+    size_t name_count;
+    char** names = tablr_dataframe_columns(df, &name_count);
+    
+    /* Check each column for NaN values */
+    for (size_t col = 0; col < ncols; col++) {
+        TablrSeries* s = tablr_dataframe_get_column(df, names[col]);
+        void* data = tablr_series_data(s);
+        TablrDType dtype = tablr_series_dtype(s);
+        size_t elem_size = tablr_dtype_size(dtype);
+        
+        for (size_t row = 0; row < nrows; row++) {
+            void* ptr = (char*)data + row * elem_size;
+            if (is_nan_value(ptr, dtype)) {
+                keep[row] = false;
+            }
+        }
+    }
+    
+    /* Build indices of rows to keep */
+    size_t keep_count = 0;
+    for (size_t i = 0; i < nrows; i++) {
+        if (keep[i]) keep_count++;
+    }
+    
+    size_t* indices = (size_t*)malloc(keep_count * sizeof(size_t));
+    size_t idx = 0;
+    for (size_t i = 0; i < nrows; i++) {
+        if (keep[i]) indices[idx++] = i;
+    }
+    
+    /* Select rows without missing values */
+    TablrDataFrame* result = tablr_dataframe_select_rows(df, indices, keep_count);
+    
+    free(keep);
+    free(indices);
+    for (size_t i = 0; i < name_count; i++) free(names[i]);
+    free(names);
+    
+    return result;
 }

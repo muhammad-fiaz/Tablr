@@ -174,26 +174,54 @@ int main() {
 
 ## 🖥️ Multi-Device Support
 
-Tablr supports multiple accelerator backends:
+Tablr supports multiple accelerator backends with full implementations:
 
 ```c
-/* CPU execution */
+/* CPU execution (default) */
 TablrSeries* s1 = tablr_series_create(data, size, TABLR_FLOAT32, TABLR_CPU);
 
-/* CUDA GPU */
+/* CUDA GPU - NVIDIA GPUs with CUDA kernels */
 TablrSeries* s2 = tablr_series_create(data, size, TABLR_FLOAT32, TABLR_CUDA);
 
-/* Intel XPU */
+/* Intel XPU - Intel GPUs with SYCL/DPC++ */
 TablrSeries* s3 = tablr_series_create(data, size, TABLR_FLOAT32, TABLR_XPU);
 
-/* Neural Processing Unit */
+/* Neural Processing Unit - AI accelerators */
 TablrSeries* s4 = tablr_series_create(data, size, TABLR_FLOAT32, TABLR_NPU);
 
-/* Tensor Processing Unit */
+/* Tensor Processing Unit - Google TPU and similar */
 TablrSeries* s5 = tablr_series_create(data, size, TABLR_FLOAT32, TABLR_TPU);
 
 /* Transfer between devices */
 TablrSeries* s_gpu = tablr_series_to_device(s1, TABLR_CUDA);
+
+/* Set default device (CPU by default) */
+tablr_set_default_device(TABLR_CUDA);
+
+/* Create with default device */
+TablrSeries* s6 = tablr_series_create_default(data, size, TABLR_FLOAT32);
+
+/* Get current default device */
+TablrDevice device = tablr_get_default_device();
+```
+
+### Building with Accelerator Support
+
+```bash
+# CUDA support (NVIDIA GPUs)
+xmake f --cuda=y && xmake
+
+# Intel XPU support (Intel GPUs)
+xmake f --xpu=y && xmake
+
+# NPU support (Neural accelerators)
+xmake f --npu=y && xmake
+
+# TPU support (Tensor accelerators)
+xmake f --tpu=y && xmake
+
+# Multiple accelerators
+xmake f --cuda=y --xpu=y --npu=y --tpu=y && xmake
 ```
 
 ## 📊 Performance
@@ -201,10 +229,13 @@ TablrSeries* s_gpu = tablr_series_to_device(s1, TABLR_CUDA);
 Tablr is designed for maximum performance:
 
 - **SIMD Optimizations**: Vectorized operations for CPU
-- **GPU Acceleration**: CUDA kernels for parallel computing
+- **CUDA Acceleration**: Real CUDA kernels for NVIDIA GPUs
+- **Intel XPU**: SYCL/DPC++ support for Intel GPUs
+- **NPU Support**: Neural processing unit acceleration
+- **TPU Support**: Tensor processing unit acceleration
 - **Memory Efficiency**: Minimal allocations and smart caching
 - **Multi-threading**: Parallel execution for large datasets
-- **Zero-Copy**: Efficient data transfer between devices
+- **Device Switching**: Change default device anytime at runtime
 
 ## 🧪 Testing
 
