@@ -10,6 +10,7 @@
 
 #include "tablr/core/types.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #ifdef TABLR_TPU_ENABLED
