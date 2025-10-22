@@ -182,8 +182,7 @@ jobs:
   update-release-notes:
     name: Update Release Notes
     runs-on: ubuntu-latest
-    if: always()
-    needs: [publish-packages]
+    needs: [build, publish-packages]
     permissions:
       contents: write
 
